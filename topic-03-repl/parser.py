@@ -32,6 +32,10 @@ def parse_simple_expression(tokens):
         new_node, tokens = parse_simple_expression(tokens[1:])
         node = {"tag": "negate", "value" : new_node}
         return node, tokens
+    if tokens[0]["tag"] == "!":
+        new_node, tokens = parse_simple_expression(tokens[1:])
+        node = {"tag": "not", "value": new_node}
+        return node, tokens
     return node, tokens
 
     raise Exception("Error: unexpected token.")
@@ -55,6 +59,23 @@ def test_parse_simple_expression():
     ast, tokens = parse_simple_expression(tokens)
     assert ast["tag"] == "identifier"
     assert ast["value"] == "x"
+    
+    tokens = tokenize("!x")
+    ast, tokens = parse_simple_expression(tokens)
+    assert ast == {
+        "tag": "not",
+        "value": {"tag": "identifier", "value": "x", "position": 1},
+    }
+    tokens = tokenize("!(2+3)")
+    ast, tokens = parse_simple_expression(tokens)
+    assert ast == {
+        "tag": "not",
+        "value": {
+            "tag": "+",
+            "left": {"tag": "number", "value": 2, "position": 2},
+            "right": {"tag": "number", "value": 3, "position": 4},
+        },
+    }
 
 
 def parse_factor(tokens):
@@ -77,10 +98,10 @@ def test_parse_factor():
 
 def parse_term(tokens):
     """
-    term = factor { "*"|"/" factor };
+    term = factor { "*"|"/"|"%" factor };
     """
     node, tokens = parse_factor(tokens)
-    while tokens[0]["tag"] in ["*", "/"]:
+    while tokens[0]["tag"] in ["*", "/", "%"]:
         operator = tokens[0]["tag"]
         new_node, tokens = parse_factor(tokens[1:])
         node = {"tag": operator, "left": node, "right": new_node}
@@ -89,7 +110,7 @@ def parse_term(tokens):
 
 def test_parse_term():
     """
-    term = factor { "*"|"/" factor };
+    term = factor { "*"|"/"|"%" factor };
     """
     tokens = tokenize("2")
     ast, tokens = parse_term(tokens)
@@ -99,6 +120,13 @@ def test_parse_term():
     ast, tokens = parse_term(tokens)
     assert ast == {
         "tag": "*",
+        "left": {"tag": "number", "value": 2, "position": 0},
+        "right": {"tag": "number", "value": 2, "position": 2},
+    }
+    tokens = tokenize("2%2")
+    ast, tokens = parse_term(tokens)
+    assert ast == {
+        "tag": "%",
         "left": {"tag": "number", "value": 2, "position": 0},
         "right": {"tag": "number", "value": 2, "position": 2},
     }
@@ -165,6 +193,16 @@ def test_parse_expression():
             "right": {"tag": "number", "value": 3, "position": 4},
         },
     }
+    ast, tokens = parse_expression(tokenize("1+2%3"))
+    assert ast == {
+        "tag": "+",
+        "left": {"tag": "number", "value": 1, "position": 0},
+        "right": {
+            "tag": "%",
+            "left": {"tag": "number", "value": 2, "position": 2},
+            "right": {"tag": "number", "value": 3, "position": 4},
+        },
+    }
     ast, tokens = parse_expression(tokenize("(1+2)*3"))
     assert ast == {
         "tag": "*",
@@ -175,9 +213,35 @@ def test_parse_expression():
         },
         "right": {"tag": "number", "value": 3, "position": 6},
     }
+    ast, tokens = parse_expression(tokenize("(1+2)%3"))
+    assert ast == {
+        "tag": "%",
+        "left": {
+            "tag": "+",
+            "left": {"tag": "number", "value": 1, "position": 1},
+            "right": {"tag": "number", "value": 2, "position": 3},
+        },
+        "right": {"tag": "number", "value": 3, "position": 6},
+    }
     ast, tokens = parse_expression(tokenize("-(1+2)*-3"))
     assert ast == {
         "tag": "*",
+        "left": {
+            "tag": "negate",
+            "value": {
+                "tag": "+",
+                "left": {"tag": "number", "value": 1, "position": 2},
+                "right": {"tag": "number", "value": 2, "position": 4},
+            },
+        },
+        "right": {
+            "tag": "negate",
+            "value": {"tag": "number", "value": 3, "position": 8},
+        },
+    }
+    ast, tokens = parse_expression(tokenize("-(1+2)%-3"))
+    assert ast == {
+        "tag": "%",
         "left": {
             "tag": "negate",
             "value": {

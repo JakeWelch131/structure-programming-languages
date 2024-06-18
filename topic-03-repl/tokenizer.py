@@ -16,6 +16,8 @@ patterns = [
     ["\+", "+"],
     ["\-", "-"],
     ["print", "print"],
+    ["\!", "!"],
+    ["\%", "%"],
     ["(\d*\.\d+)|(\d+\.\d*)|(\d+)", "number"],
     ["[A-Za-z_][A-Za-z0-9_]*","identifier"],
 ]
@@ -66,7 +68,7 @@ def test_simple_tokens():
         {"tag": "+", "value": "+", "position": 1},
         {"tag": "end", "value": "", "position": 2},
     ]
-    tokens = tokenize("*/+-()print")
+    tokens = tokenize("*/+-()print!%")                                               # testing ! and % token
     assert tokens == [
         {"tag": "*", "value": "*", "position": 0},
         {"tag": "/", "value": "/", "position": 1},
@@ -75,7 +77,9 @@ def test_simple_tokens():
         {"tag": "(", "value": "(", "position": 4},
         {"tag": ")", "value": ")", "position": 5},
         {"tag": "print", "value": "print", "position": 6},
-        {"tag": "end", "value": "", "position": 11},
+        {"tag": "!", "value": "!", "position": 11},
+        {"tag": "%", "value": "%", "position": 12},
+        {"tag": "end", "value": "", "position": 13},
     ]
     tokens = tokenize("123")
     assert tokens == [
